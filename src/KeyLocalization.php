@@ -1,7 +1,5 @@
 <?php
-
 declare(strict_types=1);
-
 namespace Yarmoshuk\Localization;
 
 use Exception;
@@ -10,8 +8,7 @@ class KeyLocalization
 {
     public function __construct(
         private readonly string $pathSection
-    ) {
-    }
+    ){}
 
     /**
      * @throws Exception
