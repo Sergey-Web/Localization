@@ -12,9 +12,12 @@ class LangLocalization
     public function __construct(
         private readonly string $pathDir,
         private readonly array $languages,
-    )
-    {}
+    ) {
+    }
 
+    /**
+     * @throws Exception
+     */
     public function create(string $lang): void
     {
         if (in_array($lang, $this->languages)) {
@@ -34,7 +37,7 @@ class LangLocalization
             throw new Exception('The "' . $oldLang . '" localization does not exist', 400);
         }
 
-        rename($this->pathDir . '/'. $oldLang, $this->pathDir . '/'. $newLang);
+        rename($this->pathDir . '/' . $oldLang, $this->pathDir . '/' . $newLang);
     }
 
     /**

@@ -19,8 +19,7 @@ class ManagerLocalization
      */
     public function __construct(
         private readonly string $pathLocalization
-    )
-    {
+    ) {
         $this->setLocalizationLang();
         $this->setLocalizationSection();
     }
@@ -155,9 +154,8 @@ class ManagerLocalization
 
         $keys = [];
         foreach ($this->sections as $section) {
-            $keys[$section] = (new SectionLocalization(
-                $this->generatePathSection($section, $lang))
-            )->getKeys();
+            $keys[$section] = (new SectionLocalization($this->generatePathSection($section, $lang)))
+                ->getKeys();
         }
 
         return $keys;
