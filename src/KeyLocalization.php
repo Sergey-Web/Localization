@@ -10,8 +10,8 @@ class KeyLocalization
 {
     public function __construct(
         private readonly string $pathSection
-    )
-    {}
+    ) {
+    }
 
     /**
      * @throws Exception
@@ -99,7 +99,8 @@ END;
     {
         if ($this->existsKey($key) === false) {
             throw new Exception(
-                'The key "' . $key . '" is not in the section', 400
+                'The key "' . $key . '" is not in the section',
+                400
             );
         }
     }
@@ -111,7 +112,8 @@ END;
     {
         if ($this->existsKey($key)) {
             throw new Exception(
-                'Key "' . $key . '" already exists in the section', 400
+                'Key "' . $key . '" already exists in the section',
+                400
             );
         }
     }

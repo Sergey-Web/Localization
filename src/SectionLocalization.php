@@ -10,8 +10,8 @@ class SectionLocalization
 {
     public function __construct(
         private readonly string $pathSection
-    )
-    {}
+    ) {
+    }
 
     public function getKeys(): array
     {
