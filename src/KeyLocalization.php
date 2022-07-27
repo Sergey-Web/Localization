@@ -8,17 +8,25 @@ use Exception;
 
 class KeyLocalization
 {
-    public function __construct(
-        private readonly string $pathSection
-    ) {
-    }
-
     /**
      * @throws Exception
      */
-    public function setValue(string $key, string $value): bool|int
+    public function __construct(
+        private readonly string $pathSection
+    ) {
+        if (!file_exists($this->pathSection)) {
+            throw new Exception('The file path is incorrect');
+        }
+    }
+
+    /**
+     * @psalm-suppress UnresolvableInclude
+     * @throws Exception
+     */
+    public function setValue(string $key, string $value): int|bool
     {
         $this->checkExistKey($key);
+        /** @var array <mixed> $data */
         $data = include $this->pathSection;
         $data[$key] = $value;
 
@@ -26,16 +34,21 @@ class KeyLocalization
     }
 
     /**
+     * @psalm-suppress UnresolvableInclude
      * @throws Exception
      */
     public function getKey(string $key): string
     {
         $this->checkExistKey($key);
+        /** @var array <mixed> $data */
         $data = include $this->pathSection;
 
         return $data[$key];
     }
 
+    /**
+     * @psalm-suppress UnresolvableInclude
+     */
     public function existsKey(string $key): bool
     {
         $data = include $this->pathSection;
@@ -44,6 +57,7 @@ class KeyLocalization
     }
 
     /**
+     * @psalm-suppress UnresolvableInclude
      * @throws Exception
      */
     public function create(string $key): bool|int
@@ -55,6 +69,9 @@ class KeyLocalization
         return file_put_contents($this->pathSection, $this->createContextForFile($data));
     }
 
+    /**
+     * @psalm-suppress UnresolvableInclude
+     */
     public function delete(string $key): bool|int
     {
         $data = include $this->pathSection;
@@ -63,6 +80,9 @@ class KeyLocalization
         return file_put_contents($this->pathSection, $this->createContextForFile($data));
     }
 
+    /**
+     * @psalm-suppress UnresolvableInclude
+     */
     public function rename(string $newKey, string $oldKey): bool|int
     {
         $data = include $this->pathSection;
