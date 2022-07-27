@@ -1,0 +1,11 @@
+language: php
+
+php:
+  - "8.1"
+
+install:
+  - composer install --dev
+
+script:
+  - ./vendor/bin/phpcs
+  - ./vendor/bin/phpstan analyse

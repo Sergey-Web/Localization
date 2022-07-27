@@ -13,6 +13,10 @@ class SectionLocalization
     ) {
     }
 
+    /**
+     * @throws Exception
+     * @return array <int, string>
+     */
     public function getKeys(): array
     {
         if (!file_exists($this->pathSection)) {
