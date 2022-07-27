@@ -2,4 +2,4 @@
 <ruleset>
     <rule ref="PSR12" />
     <file>src</file>
-</ruleset>g
+</ruleset>
