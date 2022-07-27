@@ -11,24 +11,37 @@ class ManagerLocalization
 {
     public const FILE_EXTENSION = '.php';
 
+    /**
+     * @var array<int, string>
+     */
     private array $languages;
+
+    /**
+     * @var array <int, string>
+     */
     private array $sections;
 
     /**
      * @throws Exception
      */
     public function __construct(
-        private readonly string $pathLocalization
+        private readonly string $pathLocalization,
     ) {
-        $this->setLocalizationLang();
-        $this->setLocalizationSection();
+        $this->languages = $this->setLocalizationLang();
+        $this->sections = $this->setLocalizationSection();
     }
 
+    /**
+     * @return array <int, string>
+     */
     public function getLanguages(): array
     {
         return $this->languages;
     }
 
+    /**
+     * @return array <int, string>
+     */
     public function getSections(): array
     {
         return $this->sections;
@@ -146,6 +159,7 @@ class ManagerLocalization
     }
 
     /**
+     * @return array <mixed>
      * @throws Exception
      */
     public function getKeys(string $lang): array
@@ -162,7 +176,7 @@ class ManagerLocalization
     }
 
     /**
-     * @throws Exception
+     * @return array <string, string>
      */
     public function getKey(string $key, string $section): array
     {
@@ -224,11 +238,12 @@ class ManagerLocalization
     }
 
     /**
+     * @return array <int, string>
      * @throws Exception
      */
-    private function setLocalizationLang(): void
+    private function setLocalizationLang(): array
     {
-        $this->languages = [];
+        $languages = [];
 
         /** @var DirectoryIterator $fileInfo */
         foreach (new DirectoryIterator($this->pathLocalization) as $fileInfo) {
@@ -236,13 +251,18 @@ class ManagerLocalization
                 continue;
             }
 
-            $this->languages[] = $fileInfo->getFilename();
+            $languages[] = $fileInfo->getFilename();
         }
+
+        return $languages;
     }
 
-    private function setLocalizationSection(): void
+    /**
+     * @return array <int, string>
+     */
+    private function setLocalizationSection(): array
     {
-        $this->sections = [];
+        $sections = [];
         if (!empty($this->languages)) {
             $path = $this->pathLocalization . DIRECTORY_SEPARATOR . $this->languages[0];
 
@@ -252,9 +272,11 @@ class ManagerLocalization
                     continue;
                 }
 
-                $this->sections[] = str_replace(static::FILE_EXTENSION, '', $item->getFilename());
+                $sections[] = str_replace(static::FILE_EXTENSION, '', $item->getFilename());
             }
         }
+
+        return $sections;
     }
 
     private function generatePathSection(string $fileName, string $lang): string
@@ -274,6 +296,9 @@ class ManagerLocalization
         }
     }
 
+    /**
+     * @throws Exception
+     */
     private function checkExistLang(string $lang): void
     {
         if (!in_array($lang, $this->languages)) {

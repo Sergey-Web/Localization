@@ -9,6 +9,9 @@ use Exception;
 
 class LangLocalization
 {
+    /**
+     * @param array <int, string> $languages
+     */
     public function __construct(
         private readonly string $pathDir,
         private readonly array $languages,

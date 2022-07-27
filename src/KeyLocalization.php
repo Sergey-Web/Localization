@@ -72,6 +72,9 @@ class KeyLocalization
         return file_put_contents($this->pathSection, $this->createContextForFile($data));
     }
 
+    /**
+     * @param array <int, string> $data
+     */
     private function createContextForFile(array $data): string
     {
         $startFile = <<<START
