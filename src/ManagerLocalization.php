@@ -27,6 +27,10 @@ class ManagerLocalization
     public function __construct(
         private readonly string $pathLocalization,
     ) {
+        if (is_dir($pathLocalization) === false) {
+            throw new Exception('Localization directory does not exist');
+        }
+
         $this->languages = $this->setLocalizationLang();
         $this->sections = $this->setLocalizationSection();
     }
