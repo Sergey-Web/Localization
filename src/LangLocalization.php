@@ -5,55 +5,68 @@ declare(strict_types=1);
 namespace Yarmoshuk\Localization;
 
 use DirectoryIterator;
-use Exception;
+use Yarmoshuk\Localization\Exceptions\LangAlreadyExistsException;
+use Yarmoshuk\Localization\Exceptions\LangDoesNotExistException;
+use Yarmoshuk\Localization\Exceptions\LocalDoesNotExistException;
 
 class LangLocalization
 {
     /**
+     * @param string $pathDir
      * @param array <int, string> $languages
+     * @throws LocalDoesNotExistException
      */
     public function __construct(
         private readonly string $pathDir,
         private readonly array $languages,
     ) {
+        if (is_dir($pathDir) === false) {
+            throw new LocalDoesNotExistException();
+        }
     }
 
     /**
-     * @throws Exception
+     * @throws LangAlreadyExistsException
      */
-    public function create(string $lang): void
+    public function create(string $lang): bool
     {
         if (in_array($lang, $this->languages)) {
-            throw new Exception('The "' . $lang . '" localization already exists', 400);
+            throw new LangAlreadyExistsException();
         }
 
-        mkdir($this->pathDir . '/' . $lang);
+        return mkdir($this->pathDir . DIRECTORY_SEPARATOR . $lang);
     }
 
-    public function rename(string $newLang, string $oldLang): void
+    /**
+     * @throws LangAlreadyExistsException
+     * @throws LangDoesNotExistException
+     */
+    public function rename(string $newLang, string $oldLang): bool
     {
         if (in_array($newLang, $this->languages)) {
-            throw new Exception('The "' . $newLang . '" localization already exists', 400);
+            throw new LangAlreadyExistsException();
         }
 
         if (!in_array($oldLang, $this->languages)) {
-            throw new Exception('The "' . $oldLang . '" localization does not exist', 400);
+            throw new LangDoesNotExistException();
         }
 
-        rename($this->pathDir . '/' . $oldLang, $this->pathDir . '/' . $newLang);
+        return rename(
+            $this->pathDir . DIRECTORY_SEPARATOR . $oldLang,
+            $this->pathDir . DIRECTORY_SEPARATOR . $newLang
+        );
     }
 
     /**
-     * @throws Exception
+     * @throws LangDoesNotExistException
      */
-    public function delete(string $lang): void
+    public function delete(string $lang): bool
     {
         if (!in_array($lang, $this->languages)) {
-            throw new Exception('The "' . $lang . '" localization does not exist', 400);
+            throw new LangDoesNotExistException();
         }
 
-        /** @var DirectoryIterator $fileInfo */
-        foreach (new DirectoryIterator($this->pathDir . '/' . $lang) as $fileInfo) {
+        foreach (new DirectoryIterator($this->pathDir . DIRECTORY_SEPARATOR . $lang) as $fileInfo) {
             if ($fileInfo->isDot()) {
                 continue;
             }
@@ -61,6 +74,6 @@ class LangLocalization
             unlink($fileInfo->getPathname());
         }
 
-        rmdir($this->pathDir . '/' . $lang);
+        return rmdir($this->pathDir . DIRECTORY_SEPARATOR . $lang);
     }
 }
