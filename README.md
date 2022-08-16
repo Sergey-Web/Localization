@@ -1,5 +1,9 @@
-This extension will help you work with the localization file system so that you do not have to manually edit folders and files.
+Extension for localizations in Laravel.
+https://laravel.com/docs/9.x/localization
 
+It helps to work with the file system of localizations so that you do not have to manually edit folders and files.
+
+Example:
 ```
 <?php
 
