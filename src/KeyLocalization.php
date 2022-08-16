@@ -4,29 +4,31 @@ declare(strict_types=1);
 
 namespace Yarmoshuk\Localization;
 
-use Exception;
+use Yarmoshuk\Localization\Exceptions\KeyDoesAlreadyExistsException;
+use Yarmoshuk\Localization\Exceptions\KeyDoesNotExistException;
+use Yarmoshuk\Localization\Exceptions\SectionDoesNotExistException;
 
 class KeyLocalization
 {
     /**
-     * @throws Exception
+     * @throws SectionDoesNotExistException
      */
     public function __construct(
         private readonly string $pathSection
     ) {
         if (!file_exists($this->pathSection)) {
-            throw new Exception('The file path is incorrect');
+            throw new SectionDoesNotExistException();
         }
     }
 
     /**
      * @psalm-suppress UnresolvableInclude
-     * @throws Exception
+     * @throws KeyDoesNotExistException
      */
     public function setValue(string $key, string $value): int|bool
     {
-        $this->checkExistKey($key);
-        /** @var array <mixed> $data */
+        $this->checkKeyExists($key);
+        /** @var array $data <mixed> $data */
         $data = include $this->pathSection;
         $data[$key] = $value;
 
@@ -35,15 +37,15 @@ class KeyLocalization
 
     /**
      * @psalm-suppress UnresolvableInclude
-     * @throws Exception
+     * @throws KeyDoesNotExistException
      */
-    public function getKey(string $key): string
+    public function getValue(string $key): string
     {
-        $this->checkExistKey($key);
-        /** @var array <mixed> $data */
+        $this->checkKeyExists($key);
+        /** @var array $data */
         $data = include $this->pathSection;
 
-        return $data[$key];
+        return (string) $data[$key];
     }
 
     /**
@@ -51,6 +53,7 @@ class KeyLocalization
      */
     public function existsKey(string $key): bool
     {
+        /** @var array $data */
         $data = include $this->pathSection;
 
         return isset($data[$key]);
@@ -58,11 +61,13 @@ class KeyLocalization
 
     /**
      * @psalm-suppress UnresolvableInclude
-     * @throws Exception
+     * @throws KeyDoesAlreadyExistsException
      */
     public function create(string $key): bool|int
     {
         $this->checkDuplicateKey($key);
+
+        /** @var array $data */
         $data = include $this->pathSection;
         $data[$key] = '';
 
@@ -71,9 +76,12 @@ class KeyLocalization
 
     /**
      * @psalm-suppress UnresolvableInclude
+     * @throws KeyDoesNotExistException
      */
     public function delete(string $key): bool|int
     {
+        $this->checkKeyExists($key);
+        /** @var array $data */
         $data = include $this->pathSection;
         unset($data[$key]);
 
@@ -82,9 +90,15 @@ class KeyLocalization
 
     /**
      * @psalm-suppress UnresolvableInclude
+     * @throws KeyDoesAlreadyExistsException
+     * @throws KeyDoesNotExistException
      */
     public function rename(string $newKey, string $oldKey): bool|int
     {
+        $this->checkKeyExists($oldKey);
+        $this->checkDuplicateKey($newKey);
+
+        /** @var array<string, string> $data */
         $data = include $this->pathSection;
         $data[$newKey] = $data[$oldKey];
         unset($data[$oldKey]);
@@ -107,6 +121,7 @@ START;
 ];
 
 END;
+        /** @var string $val */
         foreach ($data as $key => $val) {
             $startFile .= '
     \'' . $key . '\' => \'' . $val . '\',';
@@ -116,28 +131,22 @@ END;
     }
 
     /**
-     * @throws Exception
+     * @throws KeyDoesNotExistException
      */
-    private function checkExistKey(string $key): void
+    private function checkKeyExists(string $key): void
     {
         if ($this->existsKey($key) === false) {
-            throw new Exception(
-                'The key "' . $key . '" is not in the section',
-                400
-            );
+            throw new KeyDoesNotExistException();
         }
     }
 
     /**
-     * @throws Exception
+     * @throws KeyDoesAlreadyExistsException
      */
     private function checkDuplicateKey(string $key): void
     {
         if ($this->existsKey($key)) {
-            throw new Exception(
-                'Key "' . $key . '" already exists in the section',
-                400
-            );
+            throw new KeyDoesAlreadyExistsException();
         }
     }
 }

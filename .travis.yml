@@ -8,5 +8,4 @@ install:
 
 script:
   - ./vendor/bin/phpcs
-  - ./vendor/bin/phpstan analyse
   - ./vendor/bin/psalm

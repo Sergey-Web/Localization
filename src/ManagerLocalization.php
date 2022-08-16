@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Yarmoshuk\Localization;
 
-use DirectoryIterator;
-use Exception;
+use Yarmoshuk\Localization\Exceptions\KeyDoesAlreadyExistsException;
+use Yarmoshuk\Localization\Exceptions\KeyDoesNotExistException;
+use Yarmoshuk\Localization\Exceptions\LangAlreadyExistsException;
+use Yarmoshuk\Localization\Exceptions\LangDoesNotExistException;
+use Yarmoshuk\Localization\Exceptions\LocalDoesNotExistException;
+use Yarmoshuk\Localization\Exceptions\SectionAlreadyExistsException;
+use Yarmoshuk\Localization\Exceptions\SectionDoesNotExistException;
 
 class ManagerLocalization
 {
@@ -17,22 +22,22 @@ class ManagerLocalization
     private array $languages;
 
     /**
-     * @var array <int, string>
+     * @var array<int, string>
      */
     private array $sections;
 
     /**
-     * @throws Exception
+     * @throws LocalDoesNotExistException
      */
     public function __construct(
         private readonly string $pathLocalization,
     ) {
         if (is_dir($pathLocalization) === false) {
-            throw new Exception('Localization directory does not exist');
+            throw new LocalDoesNotExistException();
         }
 
-        $this->languages = $this->setLocalizationLang();
-        $this->sections = $this->setLocalizationSection();
+        $this->languages = HelperLocalization::getLanguages($this->pathLocalization);
+        $this->sections = HelperLocalization::getSections($this->pathLocalization);
     }
 
     /**
@@ -52,9 +57,14 @@ class ManagerLocalization
     }
 
     /**
-     * @throws Exception
+     * @throws KeyDoesAlreadyExistsException
+     * @throws LangAlreadyExistsException
+     * @throws LangDoesNotExistException
+     * @throws LocalDoesNotExistException
+     * @throws SectionAlreadyExistsException
+     * @throws SectionDoesNotExistException
      */
-    public function createLocal(string $lang): bool
+    public function createLang(string $lang): bool
     {
         $languages = $this->languages;
         (new LangLocalization($this->pathLocalization, $this->languages))
@@ -66,12 +76,16 @@ class ManagerLocalization
             $sections = $this->getKeys($languages[0]);
 
             foreach ($sections as $sectionName => $keys) {
-                (new SectionLocalization($this->generatePathSection($sectionName, $lang)))->create();
+                $pathSection = HelperLocalization::generatePathSection(
+                    $this->pathLocalization,
+                    $sectionName,
+                    $lang
+                );
+
+                (new SectionLocalization($pathSection))->create();
 
                 foreach ($keys as $key => $val) {
-                    (new KeyLocalization(
-                        $this->generatePathSection($sectionName, $lang)
-                    ))->create($key);
+                    (new KeyLocalization($pathSection))->create($key);
                 }
             }
         }
@@ -80,38 +94,43 @@ class ManagerLocalization
     }
 
     /**
-     * @throws Exception
+     * @throws LangAlreadyExistsException
+     * @throws LangDoesNotExistException
+     * @throws LocalDoesNotExistException
      */
-    public function renameLang(string $newLang, string $oldLang): bool
+    public function renameLang(string $langNew, string $langOld): bool
     {
-        (new LangLocalization($this->pathLocalization, $this->languages))
-            ->rename($newLang, $oldLang);
-
-        return true;
+        return (new LangLocalization($this->pathLocalization, $this->languages))
+            ->rename($langNew, $langOld);
     }
 
     /**
-     * @throws Exception
+     * @throws LangDoesNotExistException
+     * @throws LocalDoesNotExistException
      */
     public function deleteLang(string $lang): bool
     {
-        (new LangLocalization($this->pathLocalization, $this->languages))
+        return (new LangLocalization($this->pathLocalization, $this->languages))
             ->delete($lang);
-
-        return true;
     }
 
     /**
-     * @throws Exception
+     * @throws LangDoesNotExistException|SectionAlreadyExistsException
      */
     public function createSection(string $sectionName): bool
     {
         if (!isset($this->languages[0])) {
-            throw new Exception('You can\'t create a section without localizations', 400);
+            throw new LangDoesNotExistException();
         }
 
         foreach ($this->languages as $lang) {
-            (new SectionLocalization($this->generatePathSection($sectionName, $lang)))
+            $pathSection = HelperLocalization::generatePathSection(
+                $this->pathLocalization,
+                $sectionName,
+                $lang
+            );
+
+            (new SectionLocalization($pathSection))
                 ->create();
         }
 
@@ -119,52 +138,78 @@ class ManagerLocalization
     }
 
     /**
-     * @throws Exception
+     * @throws SectionDoesNotExistException
      */
     public function deleteSection(string $sectionName): bool
     {
         foreach ($this->languages as $lang) {
-            (new SectionLocalization($this->generatePathSection($sectionName, $lang)))
-                ->delete();
+            $pathSection = HelperLocalization::generatePathSection(
+                $this->pathLocalization,
+                $sectionName,
+                $lang
+            );
+
+            (new SectionLocalization($pathSection))->delete();
         }
 
         return true;
     }
 
     /**
-     * @throws Exception
+     * @throws SectionAlreadyExistsException
+     * @throws SectionDoesNotExistException
      */
     public function renameSection(string $newSectionName, string $oldSectionName): bool
     {
         foreach ($this->languages as $lang) {
-            (new SectionLocalization(
-                $this->generatePathSection($oldSectionName, $lang)
-            ))->rename(
-                pathNewSection: $this->generatePathSection($newSectionName, $lang)
+            $pathSectionOld = HelperLocalization::generatePathSection(
+                $this->pathLocalization,
+                $oldSectionName,
+                $lang
             );
+
+            $pathSectionNew = HelperLocalization::generatePathSection(
+                $this->pathLocalization,
+                $newSectionName,
+                $lang
+            );
+
+            (new SectionLocalization($pathSectionOld))
+                ->rename($pathSectionNew);
         }
 
         return true;
     }
 
     /**
-     * @throws Exception
+     * @throws KeyDoesNotExistException
+     * @throws LangDoesNotExistException
+     * @throws SectionDoesNotExistException
      */
-    public function setValueForKey(string $key, string $value, string $section, string $lang): bool
-    {
+    public function setValueForKey(
+        string $key,
+        string $value,
+        string $section,
+        string $lang
+    ): bool {
         $this->checkExistLang($lang);
         $this->checkExistSection($section);
 
-        (new KeyLocalization(
-            $this->generatePathSection($section, $lang)
-        ))->setValue($key, $value);
+        $pathSection = HelperLocalization::generatePathSection(
+            $this->pathLocalization,
+            $section,
+            $lang
+        );
+
+        (new KeyLocalization($pathSection))->setValue($key, $value);
 
         return true;
     }
 
     /**
      * @return array <mixed>
-     * @throws Exception
+     * @throws LangDoesNotExistException
+     * @throws SectionDoesNotExistException
      */
     public function getKeys(string $lang): array
     {
@@ -172,8 +217,13 @@ class ManagerLocalization
 
         $keys = [];
         foreach ($this->sections as $section) {
-            $keys[$section] = (new SectionLocalization($this->generatePathSection($section, $lang)))
-                ->getKeys();
+            $pathSection = HelperLocalization::generatePathSection(
+                $this->pathLocalization,
+                $section,
+                $lang
+            );
+
+            $keys[$section] = (new SectionLocalization($pathSection))->getKeys();
         }
 
         return $keys;
@@ -188,125 +238,99 @@ class ManagerLocalization
 
         $keyData = [];
         foreach ($this->languages as $lang) {
-            $keyData[$lang] = (new KeyLocalization(
-                $this->generatePathSection($section, $lang)
-            ))->getKey($key);
+            $pathSection = HelperLocalization::generatePathSection(
+                $this->pathLocalization,
+                $section,
+                $lang
+            );
+
+            $keyData[$lang] = (new KeyLocalization($pathSection))->getValue($key);
         }
 
         return $keyData;
     }
 
     /**
-     * @throws Exception
+     * @throws KeyDoesAlreadyExistsException
+     * @throws SectionDoesNotExistException
      */
     public function createKey(string $key, string $section): bool
     {
         $this->checkExistSection($section);
 
         foreach ($this->languages as $lang) {
-            (new KeyLocalization(
-                $this->generatePathSection($section, $lang)
-            ))->create($key);
+            $pathSection = HelperLocalization::generatePathSection(
+                $this->pathLocalization,
+                $section,
+                $lang
+            );
+
+            (new KeyLocalization($pathSection))->create($key);
         }
 
         return true;
     }
 
     /**
-     * @throws Exception
+     * @throws KeyDoesAlreadyExistsException
+     * @throws KeyDoesNotExistException
+     * @throws SectionDoesNotExistException
      */
     public function renameKey(string $newKey, string $oldKey, string $section): bool
     {
         $this->checkExistSection($section);
 
         foreach ($this->languages as $lang) {
-            (new KeyLocalization($this->generatePathSection($section, $lang)))
-                ->rename($newKey, $oldKey);
+            $pathSection = HelperLocalization::generatePathSection(
+                $this->pathLocalization,
+                $section,
+                $lang
+            );
+
+            (new KeyLocalization($pathSection))->rename($newKey, $oldKey);
         }
 
         return true;
     }
 
     /**
-     * @throws Exception
+     * @throws KeyDoesNotExistException
+     * @throws SectionDoesNotExistException
      */
     public function deleteKey(string $key, string $section): bool
     {
         $this->checkExistSection($section);
 
         foreach ($this->languages as $lang) {
-            (new KeyLocalization($this->generatePathSection($section, $lang)))->delete($key);
+            $pathSection = HelperLocalization::generatePathSection(
+                $this->pathLocalization,
+                $section,
+                $lang
+            );
+
+            (new KeyLocalization($pathSection))->delete($key);
         }
 
         return true;
     }
 
     /**
-     * @return array <int, string>
-     * @throws Exception
+     * @throws SectionDoesNotExistException
      */
-    private function setLocalizationLang(): array
-    {
-        $languages = [];
-
-        /** @var DirectoryIterator $fileInfo */
-        foreach (new DirectoryIterator($this->pathLocalization) as $fileInfo) {
-            if ($fileInfo->isDot()) {
-                continue;
-            }
-
-            $languages[] = $fileInfo->getFilename();
-        }
-
-        return $languages;
-    }
-
-    /**
-     * @return array <int, string>
-     */
-    private function setLocalizationSection(): array
-    {
-        $sections = [];
-        if (!empty($this->languages)) {
-            $path = $this->pathLocalization . DIRECTORY_SEPARATOR . $this->languages[0];
-
-            /** @var DirectoryIterator $item */
-            foreach (new DirectoryIterator($path) as $item) {
-                if ($item->isDot()) {
-                    continue;
-                }
-
-                $sections[] = str_replace(static::FILE_EXTENSION, '', $item->getFilename());
-            }
-        }
-
-        return $sections;
-    }
-
-    private function generatePathSection(string $fileName, string $lang): string
-    {
-        return $this->pathLocalization . DIRECTORY_SEPARATOR
-            . $lang . DIRECTORY_SEPARATOR
-            . $fileName . static::FILE_EXTENSION;
-    }
-
     private function checkExistSection(string $section): void
     {
         if (!in_array($section, $this->sections)) {
-            throw new Exception(
-                'The "' . $section . '" section does not exist',
-                400
-            );
+            throw new SectionDoesNotExistException();
         }
     }
 
     /**
-     * @throws Exception
+     * @throws LangDoesNotExistException
      */
     private function checkExistLang(string $lang): void
     {
         if (!in_array($lang, $this->languages)) {
-            throw new Exception('The "' . $lang . '" language does not exist', 400);
+            throw new LangDoesNotExistException();
         }
     }
 }
